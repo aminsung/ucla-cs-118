@@ -30,12 +30,16 @@ int main(int argc, char *argv[])
     sockfd = socket(AF_INET, SOCK_DGRAM, 0); // Create a socket fd
     if (sockfd < 0) error("Opening socket");
 
+    length = sizeof(struct sockaddr_in);
+    memset((char *) &sender, 0, length);
+
     sender.sin_family = AF_INET;
     sender.sin_port = htons(atoi(argv[1]));
     sender.sin_addr.s_addr = INADDR_ANY;
 
     if (bind(sockfd, (struct sockaddr *) &sender, length) < 0)
-        error("binding");
+        error("binding issues");
+
     recv_len = sizeof(struct sockaddr_in);
 
     while (1) {
@@ -44,7 +48,7 @@ int main(int argc, char *argv[])
             std::cout << "ERROR Sender Reading from socket" << std::endl;
         }
         std::cout << "MESSAGE Received: " << buf << std::endl;
-        n = sendto(sockfd, );
+        n = sendto(sockfd, "Got your message\n", 17, 0, (struct sockaddr *)&receiver, recv_len);
         if (n < 0) {
             std::cout << "ERROR Sender Sending from socket" << std::endl;
         }
