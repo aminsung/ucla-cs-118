@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     }
 
     sockfd = socket(AF_INET, SOCK_DGRAM, 0); // Create a socket fd
-    if (sockfd < 0) error("Opening socket");
+    if (sockfd < 0) error("ERROR Opening socket");
 
     length = sizeof(struct sockaddr_in);
     memset((char *) &sender, 0, length);
@@ -45,12 +45,16 @@ int main(int argc, char *argv[])
     while (1) {
         n = recvfrom(sockfd, buf, 1024, 0, (struct sockaddr *) &receiver, &recv_len);
         if (n < 0) {
-            std::cout << "ERROR Sender Reading from socket" << std::endl;
+            // std::cout << "ERROR Sender Reading from socket" << std::endl;
+            error("ERROR recvfrom");
         }
-        std::cout << "MESSAGE Received: " << buf << std::endl;
+        // std::cout << "MESSAGE Received: " << buf << std::endl;
+        write(1, "Recevied a datagram: ", 21);
+        write(1, buf, n);
         n = sendto(sockfd, "Got your message\n", 17, 0, (struct sockaddr *)&receiver, recv_len);
         if (n < 0) {
-            std::cout << "ERROR Sender Sending from socket" << std::endl;
+            // std::cout << "ERROR Sender Sending from socket" << std::endl;
+            error("ERROR sendto");
         }
     }
 

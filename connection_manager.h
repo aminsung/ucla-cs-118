@@ -12,5 +12,7 @@ class connection_manager {
         connection_manager(int win_size = DEFAULT_WIN_SIZE, double packet_loss = 0, double packet_corrupt = 0);
 
     private:
+        sockaddr_in sender_addr;
+        sockaddr_in receiver_addr;
         
 };
