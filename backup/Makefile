@@ -1,8 +1,8 @@
 C = gcc
 all: server client
 
-server: server.cpp
-		$(CC) server.cpp -o server
+server: server.c
+		$(CC) server.c -o server
 
-client: client.cpp
-		$(CC) client.cpp -o client
+client: client.c
+		$(CC) client.c -o client
