@@ -7,11 +7,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <iostream>
 #include <time.h>
-#include "packet_info.h"
+#include "packet_info.c"
 
-int MTU = 256;
+int data_size = 256;
 double P_c = 0.0;
 double P_l = 0.0;
 
@@ -32,7 +31,7 @@ int main(int argc, char *argv[])
     struct sockaddr_in sender, receiver; // sender: server | receiver: client
     struct hostent *hp;
     char *filename;
-    char buf[MTU];
+    char buf[data_size];
 
     filename = argv[3];
 
@@ -49,13 +48,23 @@ int main(int argc, char *argv[])
 
     // Construct a request packet to send
     struct packet_info request_packet;
-    request_packet..data = 
+    bzero((char *) &request_packet, sizeof(request_packet));
+    strcpy(request_packet.data, filename);
     
     length = sizeof(struct sockaddr_in);
-    printf("Please enter the message: ");
-    bzero(buf, 256);
-    // memset((char *) &   
-    fgets(buf, 255, stdin);
+    request_packet.length = sizeof(request_packet);
+    n = sendto(sockfd, &request_packet.data, request_packet.length, 0, (const struct sockaddr *)&sender, length);
+    if (n < 0) error("ERROR Sendto");
+    printf("EVENT: File %s has been requested.\n", request_packet.data);
+
+
+
+
+
+
+
+
+
     n = sendto(sockfd, buf, strlen(buf), 0, (const struct sockaddr *)&sender, length);
     if (n < 0) error("ERROR Sendto");
     n = recvfrom(sockfd, buf, 256, 0, (struct sockaddr *)&receiver, &length);

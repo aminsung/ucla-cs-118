@@ -6,5 +6,6 @@ struct packet_info
     int seq_no;
     int status;
     double time;
-    char *data;
+    char data[MTU];
+    int length;
 };
