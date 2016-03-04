@@ -20,9 +20,17 @@ void error(const char *msg)
     exit(0);
 }
 
-void random_status(double probability)
+int random_status(double probability)
 {
-    if probability > 
+    if ((double) rand() / (double) RAND_MAX)
+       return 1;
+    return 0; 
+};
+
+void print_pkt_info(struct packet_info packet)
+{
+    // printf("Packet Type: %s\t Seq No.: %d\t Corrupt?: %d\t Lost?: %d\t Timer Val: %d");
+    printf("%d", packet.data_type);
 };
 
 int main(int argc, char *argv[])
@@ -37,8 +45,10 @@ int main(int argc, char *argv[])
     struct hostent *hp;
     char *filename;
     char buf[data_size];
+    double pkt_loss_prob;
 
     filename = argv[3];
+    pkt_loss_prob = htons(atoi(argv[4]));
 
     // Create socket fd
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -60,7 +70,12 @@ int main(int argc, char *argv[])
     request_packet.length = sizeof(request_packet);
     n = sendto(sockfd, &request_packet.data, request_packet.length, 0, (const struct sockaddr *)&sender, length);
     if (n < 0) error("ERROR Sendto");
-    printf("EVENT: File %s has been requested.\n\n", request_packet.data);
+    // printf("EVENT: File %s has been requested.\n\n", request_packet.data);
+    print_pkt_info(request_packet);
+
+
+
+
 
 
 
