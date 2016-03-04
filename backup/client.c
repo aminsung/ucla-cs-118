@@ -20,6 +20,11 @@ void error(const char *msg)
     exit(0);
 }
 
+void random_status(double probability)
+{
+    if probability > 
+};
+
 int main(int argc, char *argv[])
 {
     /*
@@ -55,7 +60,7 @@ int main(int argc, char *argv[])
     request_packet.length = sizeof(request_packet);
     n = sendto(sockfd, &request_packet.data, request_packet.length, 0, (const struct sockaddr *)&sender, length);
     if (n < 0) error("ERROR Sendto");
-    printf("EVENT: File %s has been requested.\n", request_packet.data);
+    printf("EVENT: File %s has been requested.\n\n", request_packet.data);
 
 
 
