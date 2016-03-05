@@ -22,7 +22,8 @@ void error(const char *msg)
 
 int random_status(double probability)
 {
-    if ((double) rand() / (double) RAND_MAX)
+    // If probabilty is greater than a certain random percentage...
+    if (probability > ((double) rand() / (double) RAND_MAX))
        return 1;
     return 0; 
 };
@@ -47,6 +48,7 @@ int main(int argc, char *argv[])
     char buf[data_size];
     double pkt_loss_prob;
 
+    // Store requested filename and packet loss percentage
     filename = argv[3];
     pkt_loss_prob = htons(atoi(argv[4]));
 
@@ -54,6 +56,7 @@ int main(int argc, char *argv[])
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) error("ERROR Opening socket");
 
+    // Setup server info
     hp = gethostbyname(argv[1]);
     if (hp==0) error("ERROR Unknown host");
 
@@ -66,12 +69,18 @@ int main(int argc, char *argv[])
     bzero((char *) &request_packet, sizeof(request_packet));
     strcpy(request_packet.data, filename);
     
+    // Create request packet to request the file
     length = sizeof(struct sockaddr_in);
     request_packet.length = sizeof(request_packet);
+    request_packet.seq_no = 0;
     n = sendto(sockfd, &request_packet.data, request_packet.length, 0, (const struct sockaddr *)&sender, length);
     if (n < 0) error("ERROR Sendto");
     // printf("EVENT: File %s has been requested.\n\n", request_packet.data);
     print_pkt_info(request_packet);
+
+    FILE *recv_file;
+    recv_file = fopen(strcat(filename, "_recv"), "wb");
+
 
 
 
