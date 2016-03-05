@@ -31,7 +31,7 @@ int random_status(double probability)
 void print_pkt_info(struct packet_info packet)
 {
     // printf("Packet Type: %s\t Seq No.: %d\t Corrupt?: %d\t Lost?: %d\t Timer Val: %d");
-    printf("%d", packet.data_type);
+    printf("\tSeq. No. %d\n\n", packet.seq_no);
 };
 
 int main(int argc, char *argv[])
@@ -47,6 +47,11 @@ int main(int argc, char *argv[])
     char *filename;
     char buf[data_size];
     double pkt_loss_prob;
+
+    // Check to see
+    // Up to packet loss argument needed! Packet corruption not implementedall arguments are given
+    if (argc != 5)
+        perror("Not all arguments given\n\n");
 
     // Store requested filename and packet loss percentage
     filename = argv[3];
@@ -66,20 +71,24 @@ int main(int argc, char *argv[])
 
     // Construct a request packet to send
     struct packet_info request_packet;
-    bzero((char *) &request_packet, sizeof(request_packet));
+    // bzero((char *) &request_packet, sizeof(request_packet));
+    memset((char *) &request_packet, 0, sizeof(request_packet));
     strcpy(request_packet.data, filename);
     
     // Create request packet to request the file
     length = sizeof(struct sockaddr_in);
     request_packet.length = sizeof(request_packet);
-    request_packet.seq_no = 0;
+    request_packet.seq_no = 1;
     n = sendto(sockfd, &request_packet.data, request_packet.length, 0, (const struct sockaddr *)&sender, length);
     if (n < 0) error("ERROR Sendto");
     // printf("EVENT: File %s has been requested.\n\n", request_packet.data);
     print_pkt_info(request_packet);
 
     FILE *recv_file;
+    struct packet_info response_packet;
+    response_packet.seq_no = 1;
     recv_file = fopen(strcat(filename, "_recv"), "wb");
+    memset((char *) &response_packet, 0, sizeof(response_packet));
 
 
 
