@@ -15,13 +15,14 @@ void error(const char *msg)
     exit(0);
 }
 
+int fsize(FILE *fp);
+
 int main(int argc, char *argv[])
 {
-    int sockfd, length, n;
+    int sockfd, length, n, n2;
     socklen_t recv_len;
     struct sockaddr_in sender, receiver;
     struct packet_info request_packet, response_packet;
-    char buf[MTU];
     
 
     if (argc < 2) {
@@ -43,7 +44,6 @@ int main(int argc, char *argv[])
 
     recv_len = sizeof(struct sockaddr_in);
     memset((char *) &request_packet, 0, sizeof(request_packet));
-    request_packet.length = sizeof(request_packet);
 
 
     while (1) {
@@ -53,13 +53,59 @@ int main(int argc, char *argv[])
         // Print request packet data
         print_pkt_info(request_packet);
 
-        // Setup & send back a response packet
+        // Find the absolute path to the requested file; path is stored in 'full_path'
+        FILE *file_stream;
+        char *home = getenv("PWD");
+        char *full_path = malloc(strlen(home) + strlen(request_packet.data) + 1);
+        strcpy(full_path, home);
+        strcat(full_path, "/");
+        strcat(full_path, request_packet.data);
+
+        if ( (file_stream = fopen(full_path, "rb")) == NULL )
+            perror("Cannot open file");
+
+        // Setup to send back a response packet
         memset((char *) &response_packet, 0, sizeof(response_packet));
-        response_packet.type = 2;
-        response_packet.seq_no = request_packet.seq_no;
-        n = sendto(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *)&receiver, recv_len); 
-        if (n < 0) error("ERROR sendto");
+
+        // Determines how many packets we have to send, based on the length of the file that is requested
+        int no_of_pkt = (fsize(file_stream) + (data_MTU-1)) / data_MTU;
+        response_packet.max_no = no_of_pkt;
+        response_packet.seq_no = 0;
+        printf("\n\nTotal File Size: %d bytes\n\n", fsize(file_stream));
+        printf("\n\nTotal Packet No.: %d packets\n\n", no_of_pkt);
+
+        // Create partitioned packets
+        while (response_packet.seq_no < no_of_pkt)
+        {
+            response_packet.type = 1; // Data packet
+            response_packet.seq_no++; // Sequence (ACK) number
+            printf("\nSeq Order: %d\n", response_packet.seq_no);
+
+            n2 = fread(response_packet.data, sizeof(char), data_MTU, file_stream);
+
+            if (response_packet.seq_no >= response_packet.max_no) // Last packet
+                response_packet.status = 1;
+            else
+                response_packet.status = 0;
+
+            printf("\n\nFread Bytes: %d\n\n", n2);
+            response_packet.data_size = n2;
+            sendto(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *)&receiver, recv_len);
+        }
+
+        fclose(file_stream);
+        printf("\n\n\nFinished transmitting...\n\n");
     }
 
     return 0;
+}
+
+// Function for finding the length of a file
+int fsize(FILE *fp)
+{
+    int prev = ftell(fp);
+    fseek(fp, 0, SEEK_END);
+    int sz = ftell(fp);
+    fseek(fp, prev, SEEK_SET);
+    return sz;
 }
