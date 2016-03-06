@@ -93,14 +93,10 @@ int main(int argc, char *argv[])
         {
             printf("\nERROR PACKET LOSS!\n");
         }
-
-        // Let's deal with packet loss to begin with.
-        /*
         else if (pkt_corrupt_prob < random_threshold())
         {
             printf("\nERROR PACKET CORRUPT!\n");
         } 
-        */
 
     }
 
