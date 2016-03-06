@@ -75,35 +75,24 @@ int main(int argc, char *argv[])
 
     // This is the requested file that is transferred over
     FILE *recv_file;
-    recv_file = fopen(strcat(filename, "_recv"), "wb");
+    recv_file = fopen(strcat(filename, " (2)"), "wb");
 
     // Prep for the respones packet
     struct packet_info response_packet;
     memset((char *) &response_packet, 0, sizeof(response_packet));
 
-    n = recvfrom(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *) &receiver, &length);
-    if (n < 0) error("ERROR recvfrom");
     response_packet.status = 0;
-    print_pkt_info(response_packet);
+    response_packet.seq_no = 0;
 
     while(1)
     {
-        n = recvfrom(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *) &receiver, &length);
-        fwrite(response_packet.data, sizeof(char), data_MTU, recv_file);
-        print_pkt_info(response_packet);
-
-        if (n < 0 || pkt_loss_prob < random_threshold())
-        {
-            // printf("\nERROR PACKET LOSS!\n");
-        }
-        else if (pkt_corrupt_prob < random_threshold())
-        {
-            // printf("\nERROR PACKET CORRUPT!\n");
-        } 
+        recvfrom(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *) &receiver, &length);
+        fwrite(response_packet.data, sizeof(char), response_packet.data_size, recv_file);
+        printf("\nSeq Order: %d\n", response_packet.seq_no);
+        memset((char *) &response_packet.data, 0, sizeof(response_packet.data));
 
         if (response_packet.status == 1)
             break;
-
     }
 
     close(sockfd);

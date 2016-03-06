@@ -1,4 +1,4 @@
-#define data_MTU 512
+#define data_MTU 512 
 
 // Packet struct comes out to be 544 bytes with data_MTU of 512
 struct packet_info
@@ -10,6 +10,7 @@ struct packet_info
      */
     int type;
     int seq_no;
+    int max_no;
 
     /* Status
      * 0: Middle of file
@@ -18,6 +19,7 @@ struct packet_info
     int status;
     double time;
     char data[data_MTU];
+    int data_size;
     int length;
 };
 
