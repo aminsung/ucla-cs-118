@@ -20,3 +20,9 @@ void print_pkt_info(struct packet_info packet)
     printf("  Packet Data:\t\t%s\n", packet.data);
     printf("\n");
 };
+
+double random_threshold()
+{
+    // Random threshold to see if the loss/corruption stays below this!
+    return ((double) rand() / (double) RAND_MAX);
+};

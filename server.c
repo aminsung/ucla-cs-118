@@ -7,7 +7,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <string.h>
-#include "packet_info.c"
+#include "packet.c"
 
 void error(const char *msg)
 {

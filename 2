@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
     struct hostent *hp;
     char *filename;
     char buf[MTU];
-    double pkt_loss_prob, pkt_corrupt_prob;
+    double pkt_corrupt_prob;
 
     // Check to see
     // Up to packet loss argument needed! Packet corruption not implementedall arguments are given
@@ -43,8 +43,8 @@ int main(int argc, char *argv[])
     filename = argv[3];
 
     // NOTE Make sure to change the argv[] values to follow the format of the guidelines
-    pkt_loss_prob = atof(argv[4]);
-    pkt_corrupt_prob = atof(argv[5]);
+    pkt_loss_prob = htons(atoi(argv[4));
+    pkt_corrupt_prob = htons(atoi(argv[5]));
 
     // Create socket fd
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -88,15 +88,12 @@ int main(int argc, char *argv[])
 
     while(1)
     {
-        // n = recvfrom(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *) &receiver, &length);
-        if (n < 0 || pkt_loss_prob < random_threshold())
+        n = recvfrom(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *) &receiver, &length);
+        if (n < 0 || pkt_corrupt_prob < random_threshold())
         {
-            printf("\nERROR PACKET LOSS!\n");
+            printf("ERROR PACKET CORRUPT!");
         }
-        else if (pkt_corrupt_prob < random_threshold())
-        {
-            printf("\nERROR PACKET CORRUPT!\n");
-        } 
+        else if 
 
     }
 
