@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
-#include "packet.c"
+#include "packet_info.c"
 
 // int MTU = 256;
 double P_c = 0.0;
