@@ -16,7 +16,7 @@ void error(const char *msg)
 }
 
 // void fetch_file(char *requested_file, char *buf)
-void fetch_file(char *requested_file)
+void fetch_file(char *requested_file, char *buff_data)
 {
     // Create an absolute path to the requested file
     FILE* fd;
@@ -26,14 +26,18 @@ void fetch_file(char *requested_file)
     strcat(full_path, "/");
     strcat(full_path, requested_file);
 
-    char *buff_data = NULL; // Where the file that is requested will be stored
+    // char *buff_data = NULL; // Where the file that is requested will be stored
     if ( (fd = fopen(full_path, "r"))!= NULL)
     {
         int file_size = fsize(fd);
-        buff_data = malloc(sizeof(char)*(file_size+1));
+        // buff_data = malloc(sizeof(char)*(file_size+1));
         size_t new_file_len = fread(buff_data, sizeof(char), file_size, fd);
         buff_data[new_file_len++] = '\0';
-    };
+    }
+    else
+    {
+        perror("Cannot open file");
+    }
 }
 
 int main(int argc, char *argv[])
@@ -74,12 +78,19 @@ int main(int argc, char *argv[])
         // Print request packet data
         print_pkt_info(request_packet);
 
-        fetch_file(request_packet.data);
 
         // Setup & send back a response packet
         memset((char *) &response_packet, 0, sizeof(response_packet));
         response_packet.type = 2;
         response_packet.seq_no = request_packet.seq_no;
+
+        // Fetch the file and store in the response packet
+        fetch_file(request_packet.data, response_packet.data);
+
+        // Uncomment this to see that the file has actually been stored in the struct. Definitely bigger than 1Kbyte tho.
+        // printf("%s", response_packet.data);
+        // printf("\n\n\n%lu\n\n\n", sizeof(response_packet.data));
+
         n = sendto(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *)&receiver, recv_len); 
         if (n < 0) error("ERROR sendto");
     }
