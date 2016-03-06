@@ -15,6 +15,19 @@ void error(const char *msg)
     exit(0);
 }
 
+// void fetch_file(char *requested_file, char *buf)
+void fetch_file(char *requested_file)
+{
+    // Create an absolute path to the requested file
+    char *home = getenv("PWD");
+    char *full_path = malloc(strlen(home) + strlen(requested_file) + 1);
+    strcpy(full_path, home);
+    strcat(full_path, "/");
+    strcat(full_path, requested_file);
+
+
+}
+
 int main(int argc, char *argv[])
 {
     int sockfd, length, n;
@@ -52,6 +65,8 @@ int main(int argc, char *argv[])
 
         // Print request packet data
         print_pkt_info(request_packet);
+
+        fetch_file(request_packet.data);
 
         // Setup & send back a response packet
         memset((char *) &response_packet, 0, sizeof(response_packet));
