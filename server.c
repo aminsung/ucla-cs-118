@@ -19,13 +19,21 @@ void error(const char *msg)
 void fetch_file(char *requested_file)
 {
     // Create an absolute path to the requested file
+    FILE* fd;
     char *home = getenv("PWD");
     char *full_path = malloc(strlen(home) + strlen(requested_file) + 1);
     strcpy(full_path, home);
     strcat(full_path, "/");
     strcat(full_path, requested_file);
 
-
+    char *buff_data = NULL; // Where the file that is requested will be stored
+    if ( (fd = fopen(full_path, "r"))!= NULL)
+    {
+        int file_size = fsize(fd);
+        buff_data = malloc(sizeof(char)*(file_size+1));
+        size_t new_file_len = fread(buff_data, sizeof(char), file_size, fd);
+        buff_data[new_file_len++] = '\0';
+    };
 }
 
 int main(int argc, char *argv[])
@@ -77,4 +85,14 @@ int main(int argc, char *argv[])
     }
 
     return 0;
+}
+
+// Function for finding the length of a file
+int fsize(FILE *fp)
+{
+    int prev = ftell(fp);
+    fseek(fp, 0, SEEK_END);
+    int sz = ftell(fp);
+    fseek(fp, prev, SEEK_SET);
+    return sz;
 }
