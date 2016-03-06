@@ -91,11 +91,11 @@ int main(int argc, char *argv[])
         // n = recvfrom(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *) &receiver, &length);
         if (n < 0 || pkt_loss_prob < random_threshold())
         {
-            printf("\nERROR PACKET LOSS!\n");
+            // printf("\nERROR PACKET LOSS!\n");
         }
         else if (pkt_corrupt_prob < random_threshold())
         {
-            printf("\nERROR PACKET CORRUPT!\n");
+            // printf("\nERROR PACKET CORRUPT!\n");
         } 
 
     }

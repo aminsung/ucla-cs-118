@@ -15,9 +15,9 @@ struct packet_info
 void print_pkt_info(struct packet_info packet)
 {
     printf("--------------------------------------------------\n");
-    printf("  Data   Type:\t\t%d\n", packet.type);
-    printf("  Sequence No:\t\t%d\n", packet.seq_no);
-    printf("  Packet Data:\t\t%s\n", packet.data);
+    printf("Data   Type:\t\t%d\n", packet.type);
+    printf("Sequence No:\t\t%d\n", packet.seq_no);
+    printf("Packet Data:\n%s\n", packet.data);
     printf("\n");
 };
 
