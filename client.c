@@ -68,7 +68,6 @@ int main(int argc, char *argv[])
     struct hostent *hp;
     char *filename;
     double pkt_loss_prob, pkt_corrupt_prob;
-
     // Check to see
     // Up to packet loss argument needed! Packet corruption not implementedall arguments are given
     if (argc != 6)
@@ -124,10 +123,11 @@ int main(int argc, char *argv[])
     {
         recvfrom(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *) &receiver, &length);
         fwrite(response_packet.data, sizeof(char), response_packet.data_size, recv_file);
-        printf("\nSeq Order: %d\n", response_packet.seq_no);
-        int crc_result;
-        crc_result = gen_crc16(response_packet.data, response_packet.data_size);
-        printf("CRC result: %x\n\n", crc_result);
+        //printf("\nSeq Order: %d\n", response_packet.seq_no);
+        int crc_result = gen_crc16(response_packet.data, response_packet.data_size);
+        sendto(sockfd, &crc_result, sizeof(crc_result), 0, (struct sockaddr *)&receiver, length);
+
+        //printf("CRC result: %x\n\n", crc_result);
         memset((char *) &response_packet.data, 0, sizeof(response_packet.data));
 
         if (response_packet.status == 1)
