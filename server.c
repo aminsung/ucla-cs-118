@@ -115,18 +115,17 @@ int main(int argc, char *argv[])
         while (response_packet.seq_no < no_of_pkt)
         {
             response_packet.type = 1; // Data packet
-            response_packet.seq_no++; // Sequence (ACK) number
             //printf("Seq Order: %d\n", response_packet.seq_no);
 
             n2 = fread(response_packet.data, sizeof(char), data_MTU, file_stream);
 
-            if (response_packet.seq_no >= response_packet.max_no) // Last packet
+            if (response_packet.seq_no >= response_packet.max_no-1) // Last packet
                 response_packet.status = 1;
             else
                 response_packet.status = 0;
             int crc_result;
             crc_result = gen_crc16(response_packet.data, n2);
-            crc_table[response_packet.seq_no-1] = crc_result;
+            crc_table[response_packet.seq_no] = crc_result;
 
             int received_crc;
             //printf("Fread Bytes: %d\n\n", n2);
@@ -134,8 +133,10 @@ int main(int argc, char *argv[])
             response_packet.data_size = n2;
             sendto(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *)&receiver, recv_len);
             recvfrom(sockfd, &received_crc, sizeof(received_crc), 0, (struct sockaddr *) &receiver, &recv_len);
-            printf("CRC result: %x, %x\n\n", crc_result, received_crc);
+            if (crc_result != received_crc)
+                printf("CRC result: %x\t%x\t%d\n", crc_result, received_crc, response_packet.seq_no);
 
+            response_packet.seq_no++; // Sequence (ACK) number
         }
 
         fclose(file_stream);

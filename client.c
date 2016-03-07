@@ -79,6 +79,9 @@ int main(int argc, char *argv[])
     // NOTE Make sure to change the argv[] values to follow the format of the guidelines
     pkt_loss_prob = atof(argv[4]);
     pkt_corrupt_prob = atof(argv[5]);
+    int i = 0;
+    int lost_count = 100*pkt_loss_prob;
+    int corrupt_count = lost_count+100*pkt_corrupt_prob;
 
     // Create socket fd
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -118,10 +121,17 @@ int main(int argc, char *argv[])
 
     response_packet.status = 0;
     response_packet.seq_no = 0;
-
     while(1)
     {
         recvfrom(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *) &receiver, &length);
+        if (i<lost_count){
+            memset(response_packet.data, '0', response_packet.data_size);
+        }
+        else if (i>=lost_count && i<corrupt_count){
+            int i;
+            for (i = 0; i<response_packet.data_size; i++)
+                response_packet.data[i] = 1+response_packet.data[i];
+        }
         fwrite(response_packet.data, sizeof(char), response_packet.data_size, recv_file);
         //printf("\nSeq Order: %d\n", response_packet.seq_no);
         int crc_result = gen_crc16(response_packet.data, response_packet.data_size);
@@ -132,6 +142,9 @@ int main(int argc, char *argv[])
 
         if (response_packet.status == 1)
             break;
+        i++;
+        if (i == 100)
+            i = 0;
     }
 
     close(sockfd);
