@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
         fwrite(response_packet.data, sizeof(char), response_packet.data_size, recv_file);
         printf("\nSeq Order: %d\n", response_packet.seq_no);
         int crc_result;
-        crc_result = gen_crc16(response_packet.data, strlen(response_packet.data));
+        crc_result = gen_crc16(response_packet.data, response_packet.data_size);
         printf("CRC result: %x\n\n", crc_result);
         memset((char *) &response_packet.data, 0, sizeof(response_packet.data));
 

@@ -133,6 +133,7 @@ int main(int argc, char *argv[])
 
         fclose(file_stream);
         printf("Finished transmitting...\n\n");
+        return 0;
     }
 
     return 0;
