@@ -1,0 +1,53 @@
+--------------------------------------------------
+Data   Type:		0
+Resp.  Stat:		0
+Sequence No:		1
+Packet Data:
+small.txt
+
+Total File Size: 4000 bytes
+
+Total Packet No.: 8 packets
+
+Seq Order: 1
+Fread Bytes: 512
+
+CRC result: 426e
+
+Seq Order: 2
+Fread Bytes: 512
+
+CRC result: 3d6
+
+Seq Order: 3
+Fread Bytes: 512
+
+CRC result: c7ca
+
+Seq Order: 4
+Fread Bytes: 512
+
+CRC result: 23e7
+
+Seq Order: 5
+Fread Bytes: 512
+
+CRC result: 4f24
+
+Seq Order: 6
+Fread Bytes: 512
+
+CRC result: c1c3
+
+Seq Order: 7
+Fread Bytes: 512
+
+CRC result: d126
+
+Seq Order: 8
+Fread Bytes: 416
+
+CRC result: f7fc
+
+Finished transmitting...
+

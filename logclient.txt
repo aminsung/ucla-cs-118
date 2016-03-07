@@ -1,0 +1,39 @@
+--------------------------------------------------
+Data   Type:		0
+Resp.  Stat:		0
+Sequence No:		1
+Packet Data:
+small.txt
+
+
+Seq Order: 1
+CRC result: 426e
+
+
+Seq Order: 2
+CRC result: 3d6
+
+
+Seq Order: 3
+CRC result: c7ca
+
+
+Seq Order: 4
+CRC result: 23e7
+
+
+Seq Order: 5
+CRC result: 4f24
+
+
+Seq Order: 6
+CRC result: c1c3
+
+
+Seq Order: 7
+CRC result: d126
+
+
+Seq Order: 8
+CRC result: a4e
+

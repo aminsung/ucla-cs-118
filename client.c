@@ -9,10 +9,47 @@
 #include <string.h>
 #include <time.h>
 #include "packet_info.c"
+#include "crc.h"
 
 // int MTU = 256;
 double P_c = 0.0;
 double P_l = 0.0;
+
+#define CRC16 0x8005
+
+uint16_t gen_crc16(const uint8_t *data, uint16_t size)
+{
+    uint16_t out = 0;
+    int bits_read = 0, bit_flag;
+
+    /* Sanity check: */
+    if(data == NULL)
+        return 0;
+
+    while(size > 0)
+    {
+        bit_flag = out >> 15;
+
+        /* Get next bit: */
+        out <<= 1;
+        out |= (*data >> (7 - bits_read)) & 1;
+
+        /* Increment bit counter: */
+        bits_read++;
+        if(bits_read > 7)
+        {
+            bits_read = 0;
+            data++;
+            size--;
+        }
+
+        /* Cycle check: */
+        if(bit_flag)
+            out ^= CRC16;
+
+    }
+    return out;
+}
 
 void error(const char *msg)
 {
@@ -89,6 +126,9 @@ int main(int argc, char *argv[])
         recvfrom(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *) &receiver, &length);
         fwrite(response_packet.data, sizeof(char), response_packet.data_size, recv_file);
         printf("\nSeq Order: %d\n", response_packet.seq_no);
+        int crc_result;
+        crc_result = gen_crc16(response_packet.data, strlen(response_packet.data));
+        printf("CRC result: %x\n\n", crc_result);
         memset((char *) &response_packet.data, 0, sizeof(response_packet.data));
 
         if (response_packet.status == 1)

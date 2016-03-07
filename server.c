@@ -9,6 +9,42 @@
 #include <string.h>
 #include "packet_info.c"
 
+#define CRC16 0x8005
+
+uint16_t gen_crc16(const uint8_t *data, uint16_t size)
+{
+    uint16_t out = 0;
+    int bits_read = 0, bit_flag;
+
+    /* Sanity check: */
+    if(data == NULL)
+        return 0;
+
+    while(size > 0)
+    {
+        bit_flag = out >> 15;
+
+        /* Get next bit: */
+        out <<= 1;
+        out |= (*data >> (7 - bits_read)) & 1;
+
+        /* Increment bit counter: */
+        bits_read++;
+        if(bits_read > 7)
+        {
+            bits_read = 0;
+            data++;
+            size--;
+        }
+
+        /* Cycle check: */
+        if(bit_flag)
+            out ^= CRC16;
+
+    }
+    return out;
+}
+
 void error(const char *msg)
 {
     perror(msg);
@@ -71,15 +107,15 @@ int main(int argc, char *argv[])
         int no_of_pkt = (fsize(file_stream) + (data_MTU-1)) / data_MTU;
         response_packet.max_no = no_of_pkt;
         response_packet.seq_no = 0;
-        printf("\n\nTotal File Size: %d bytes\n\n", fsize(file_stream));
-        printf("\n\nTotal Packet No.: %d packets\n\n", no_of_pkt);
+        printf("Total File Size: %d bytes\n\n", fsize(file_stream));
+        printf("Total Packet No.: %d packets\n\n", no_of_pkt);
 
         // Create partitioned packets
         while (response_packet.seq_no < no_of_pkt)
         {
             response_packet.type = 1; // Data packet
             response_packet.seq_no++; // Sequence (ACK) number
-            printf("\nSeq Order: %d\n", response_packet.seq_no);
+            printf("Seq Order: %d\n", response_packet.seq_no);
 
             n2 = fread(response_packet.data, sizeof(char), data_MTU, file_stream);
 
@@ -87,14 +123,16 @@ int main(int argc, char *argv[])
                 response_packet.status = 1;
             else
                 response_packet.status = 0;
-
-            printf("\n\nFread Bytes: %d\n\n", n2);
+            int crc_result;
+            crc_result = gen_crc16(response_packet.data, n2);
+            printf("Fread Bytes: %d\n\n", n2);
+            printf("CRC result: %x\n\n", crc_result);
             response_packet.data_size = n2;
             sendto(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *)&receiver, recv_len);
         }
 
         fclose(file_stream);
-        printf("\n\n\nFinished transmitting...\n\n");
+        printf("Finished transmitting...\n\n");
     }
 
     return 0;
