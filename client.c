@@ -9,7 +9,6 @@
 #include <string.h>
 #include <time.h>
 #include "packet_info.c"
-#include "crc.h"
 
 // int MTU = 256;
 double P_c = 0.0;
