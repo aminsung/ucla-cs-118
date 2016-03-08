@@ -11,7 +11,7 @@
 #include "packet_info.c"
 
 #define CRC16 0x8005
-#define WAIT 3000               // wait time in ms
+#define WAIT 300               // wait time in ms
 
 int diff_ms(struct timeval t1, struct timeval t2)
 {
@@ -97,9 +97,6 @@ int main(int argc, char *argv[])
     double time_last = 0.0;
 
     while (1) {
-        struct timeval end;
-        gettimeofday(&end, NULL);
-        double time_diff = diff_ms(end, start);
 
         n = recvfrom(sockfd, &request_packet, sizeof(request_packet), 0, (struct sockaddr *) &receiver, &recv_len);
         if (n < 0) error("ERROR recvfrom");
@@ -126,6 +123,7 @@ int main(int argc, char *argv[])
         response_packet.max_no = no_of_pkt;
         response_packet.seq_no = 0;
         int start_of_seq = 0;
+        int current_pkt = 0;
         int end_of_seq;
         if (window_size > no_of_pkt)
             end_of_seq = no_of_pkt;
@@ -136,73 +134,126 @@ int main(int argc, char *argv[])
         //printf("Total Packet No.: %d packets\n\n", no_of_pkt);
         struct packet_info *packet_window;
         packet_window = (struct packet_info *) malloc(window_size * sizeof(struct packet_info));
-        
         int* crc_table = (int*) malloc(window_size*sizeof(int));
-        // Create partitioned packets
-        for(response_packet.seq_no = start_of_seq;
-            response_packet.seq_no < end_of_seq;)
-        {
-            // packet properties: type/data/status/seq_no
-            // Data packet
-            int crc_result;
-            {
-                response_packet.type = 1; 
-                //printf("Seq Order: %d\n", response_packet.seq_no);
+        int* time_table = (int*) malloc(window_size*sizeof(int));
+        int i;
+        for (i = 0; i<window_size; i++)
+            time_table[i] = -2;
+        // -2 for not yet sent
+        // -1 for already ACK'ed
+        // o.w. for not yet ACK'ed.
 
-                // read packet
+        // Create partitioned packets
+        while(1){
+            // 1a) if next available seq # in window, send pkt
+            if (time_table[current_pkt - start_of_seq] == -2){
+
+                // data packet
+                response_packet.type = 1;
+
+                // read packet from file
                 n2 = fread(response_packet.data, sizeof(char), data_MTU, file_stream);
-                
-                // Last packet
-                if (response_packet.seq_no >= response_packet.max_no-1)
+                response_packet.seq_no = current_pkt;
+
+                // check if last packet
+                if (response_packet.seq_no >= response_packet.max_no-1 
+                &&  start_of_seq == end_of_seq - 1)
                     response_packet.status = 1;
                 else
                     response_packet.status = 0;
+
+                // set response size
                 response_packet.data_size = n2;
 
+                // set crc table
+                int crc_result = gen_crc16(response_packet.data, n2);
+                crc_table[current_pkt - start_of_seq] = crc_result;
+                printf("%x\n", crc_result);
+                // set time table
+                struct timeval end;
+                gettimeofday(&end, NULL);
+                int time_diff = diff_ms(end, start);
+                time_table[current_pkt - start_of_seq] = time_diff;
 
-                // checksum packet
-                crc_result = gen_crc16(response_packet.data, n2);
+                // save it
+                memcpy(&(packet_window[current_pkt - start_of_seq]), &response_packet, sizeof(struct packet_info));
 
-                // both checksum array and the packet array.
-                crc_table[response_packet.seq_no - start_of_seq] = crc_result;
-                memcpy(&(packet_window[response_packet.seq_no - start_of_seq]), &response_packet, sizeof(struct packet_info));
+                // send it
+                sendto(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *)&receiver, recv_len);
+                if (current_pkt < end_of_seq)
+                    current_pkt++;
             }
-
-            //printf("Fread Bytes: %d\n\n", n2);
-            //printf("CRC result: %x\n\n", crc_result);
-            sendto(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *)&receiver, recv_len);
+            // 2a) resend pkt n, restart timer
             
-            // response
+            for (i = start_of_seq; i<end_of_seq; i++){
+                if (time_table[i-start_of_seq] >= 0){
+                    struct timeval end;
+                    gettimeofday(&end, NULL);
+                    int time_diff = diff_ms(end, start);
+                    if (time_diff - time_table[i-start_of_seq] > WAIT){
+                        printf("(%d)\n", time_diff - time_table[i-start_of_seq]);
+                        sendto(sockfd, &(packet_window[i - start_of_seq]), sizeof((packet_window[i - start_of_seq])), 0, (struct sockaddr *)&receiver, recv_len);
+                        time_table[i-start_of_seq] = diff_ms(end, start);
+                    }
+                }
+            }
+            
+
+            // 3a) ACK(n) in [sendbase,sendbase+N]: mark pkt n as received
+
+            // initialize variables
+            fd_set inSet;
+            struct timeval timeout;
+            int received;
+
+            FD_ZERO(&inSet);
+            FD_SET(sockfd, &inSet); 
+
+            // wait for specified time
+            timeout.tv_sec = 0;
+            timeout.tv_usec = 100000;
+
+            // check for acks
+            received = select(sockfd+1, &inSet, NULL, NULL, &timeout);
+
+            // if timeout and no acks were received, break and maintain window position
+            if(received < 1)
+                continue;
+            // otherwise, fetch the ack
             int received_crc;
             recvfrom(sockfd, &received_crc, sizeof(received_crc), 0, (struct sockaddr *) &receiver, &recv_len);
-
-            // 2b. check if anything received;
-            int i, check_received = 0;
-            for (i = start_of_seq; i<end_of_seq; i++)
+            printf("%x\n", received_crc);/*
+            for (i = start_of_seq; i<end_of_seq; i++){
+                printf("%d\t", time_table[i-start_of_seq]);
+            }
+            printf("\n");*/
+            for (i = start_of_seq; i<end_of_seq; i++){
                 if (crc_table[i-start_of_seq] == received_crc)
-                    crc_table[i-start_of_seq] = -1;
+                    time_table[i-start_of_seq] = -1;
+            }
 
-            // 2a. if the first of window received
-            if (crc_table[0] != -1)
-                ;//printf("CRC result: %x\t%x\t%d\n", crc_result, received_crc, response_packet.seq_no);
-            else{
-                printf("CRC result: %x\t%x\t%d\n", crc_result, received_crc, response_packet.seq_no);
-                response_packet.seq_no++;
+
+            // 3b
+            if (time_table[0] == -1){
                 for (i = 0; i<window_size-1; i++){
                     crc_table[i] = crc_table[i+1];
-                    // just a dump function :)
-                    //print_pkt_info(packet_window[i]);
+                    time_table[i] = time_table[i+1];
                     memcpy(&(packet_window[i]), &(packet_window[i+1]), sizeof(struct packet_info));
                 }
                 crc_table[window_size-1] = 0;
+                time_table[window_size-1] = -2;
                 memset(&(packet_window[window_size-1]), 0, sizeof(struct packet_info));
                 start_of_seq++;
 
                 if (end_of_seq<no_of_pkt)
                     end_of_seq++;
+                window_size = end_of_seq - start_of_seq;
             }
+            if (start_of_seq == end_of_seq)
+                break;
+            else
+                continue;
         }
-
         fclose(file_stream);
         //printf("Finished transmitting...\n\n");
         return 0;
