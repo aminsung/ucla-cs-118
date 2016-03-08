@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
                 int crc_ret = gen_crc16(buffer[0].data, buffer[0].data_size);
 
                 // only in-order is not enough
-                // you have to be right...
+                // you have to be right
                 if (buffer[0].seq_no == start_of_seq
                     && crc_ret == buffer[0].crc_cksum){
                     fwrite(buffer[0].data, sizeof(char), buffer[0].data_size, recv_file);

@@ -173,7 +173,7 @@ int main(int argc, char *argv[])
                 int crc_result = gen_crc16(response_packet.data, n2);
                 crc_table[current_pkt - start_of_seq] = crc_result;
                 response_packet.crc_cksum = crc_result;
-                printf("%x\t", crc_result);
+                //printf("%x\t", crc_result);
                 // set time table
                 struct timeval end;
                 gettimeofday(&end, NULL);
@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
                     gettimeofday(&end, NULL);
                     int time_diff = diff_ms(end, start);
                     if (time_diff - time_table[i-start_of_seq] > WAIT){
-                        printf("(%d)\n", time_diff - time_table[i-start_of_seq]);
+                        //printf("(%d)\n", time_diff - time_table[i-start_of_seq]);
                         sendto(sockfd, &(packet_window[i - start_of_seq]), sizeof((packet_window[i - start_of_seq])), 0, (struct sockaddr *)&receiver, recv_len);
                         time_table[i-start_of_seq] = diff_ms(end, start);
                     }
@@ -227,11 +227,11 @@ int main(int argc, char *argv[])
             // otherwise, fetch the ack
             int received_crc;
             recvfrom(sockfd, &received_crc, sizeof(received_crc), 0, (struct sockaddr *) &receiver, &recv_len);
-            printf("%x\t%d\n", received_crc, current_pkt);
+            /*printf("%x\t%d\n", received_crc, current_pkt);
             for (i = start_of_seq; i<end_of_seq; i++){
                 printf("%d\t", time_table[i-start_of_seq]);
             }
-            printf("\n");
+            printf("\n");*/
             for (i = start_of_seq; i<end_of_seq; i++){
                 if (crc_table[i-start_of_seq] == received_crc)
                     time_table[i-start_of_seq] = -1;
@@ -260,8 +260,7 @@ int main(int argc, char *argv[])
                 continue;
         }
         fclose(file_stream);
-        //printf("Finished transmitting...\n\n");
-        return 0;
+        printf("Finished transmitting...\n\n");
     }
 
 
