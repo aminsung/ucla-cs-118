@@ -70,18 +70,26 @@ int main(int argc, char *argv[])
     double pkt_loss_prob, pkt_corrupt_prob;
     // Check to see
     // Up to packet loss argument needed! Packet corruption not implementedall arguments are given
-    if (argc != 6)
+    if (argc != 7)
         perror("Not all arguments given\n\n");
 
     // Store requested filename and packet loss percentage
     filename = argv[3];
 
     // NOTE Make sure to change the argv[] values to follow the format of the guidelines
-    pkt_loss_prob = atof(argv[4]);
-    pkt_corrupt_prob = atof(argv[5]);
+
+    int CW = atoi(argv[4]);
+    int window_size = CW / data_MTU;
+
+    pkt_loss_prob = atof(argv[5]);
+    pkt_corrupt_prob = atof(argv[6]);
     int i = 0;
-    int lost_count = 100*pkt_loss_prob;
-    int corrupt_count = lost_count+100*pkt_corrupt_prob;
+    int lost_count;
+    if (pkt_loss_prob != 0.0)
+        lost_count = 1 / pkt_loss_prob;
+    int corrupt_count;
+    if (pkt_corrupt_prob != 0.0)
+        corrupt_count = 1 / pkt_corrupt_prob;
 
     // Create socket fd
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -121,30 +129,82 @@ int main(int argc, char *argv[])
 
     response_packet.status = 0;
     response_packet.seq_no = 0;
+
+    struct packet_info *buffer;
+    buffer = (struct packet_info *) malloc(window_size * sizeof(struct packet_info));
+    for (i = 0; i<window_size; i++)
+        memset(&(buffer[i]), -1, sizeof(struct packet_info));
+
+    int start_of_seq = 0;
+    int end_of_seq = window_size;
     while(1)
     {
         recvfrom(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *) &receiver, &length);
-        if (i<lost_count){
-            memset(response_packet.data, '0', response_packet.data_size);
-        }
-        else if (i>=lost_count && i<corrupt_count){
+        
+        // get the max # of sequence
+        if (end_of_seq > response_packet.max_no)
+            end_of_seq = response_packet.max_no;
+        else
+            end_of_seq = window_size;
+
+        // deal with loss/corruption
+        if (pkt_loss_prob != 0.0)
+            if (i % lost_count == 0){
+                memset(response_packet.data, '0', response_packet.data_size);
+            }
+
+        if (pkt_corrupt_prob != 0.0)
+            if (i % corrupt_count == 1){
             int i;
             for (i = 0; i<response_packet.data_size; i++)
                 response_packet.data[i] = 1+response_packet.data[i];
         }
-        fwrite(response_packet.data, sizeof(char), response_packet.data_size, recv_file);
-        //printf("\nSeq Order: %d\n", response_packet.seq_no);
-        int crc_result = gen_crc16(response_packet.data, response_packet.data_size);
-        sendto(sockfd, &crc_result, sizeof(crc_result), 0, (struct sockaddr *)&receiver, length);
 
+        int current_pkt = response_packet.seq_no;
+        // 1. pkt # in [rcvbase, rcvbase+N-1]
+        if ((current_pkt - start_of_seq) >= 0
+            && (current_pkt - start_of_seq) < window_size){
+            // send ACK
+            int crc_result = gen_crc16(response_packet.data, response_packet.data_size);
+            sendto(sockfd, &crc_result, sizeof(crc_result), 0, (struct sockaddr *)&receiver, length);
+            // buffer first
+            memcpy(&(buffer[current_pkt - start_of_seq]), &response_packet, sizeof(struct packet_info));
+
+            while (1){
+                int crc_ret = gen_crc16(buffer[0].data, buffer[0].data_size);
+
+                // only in-order is not enough
+                // you have to be right...
+                if (buffer[0].seq_no == start_of_seq
+                    && crc_ret == buffer[0].crc_cksum){
+                    fwrite(buffer[0].data, sizeof(char), buffer[0].data_size, recv_file);
+
+                    for (i = 0; i<window_size-1; i++){
+                        memcpy(&(buffer[i]), &(buffer[i+1]), sizeof(struct packet_info));
+                    }
+                    memset(&(buffer[window_size-1]), -1, sizeof(struct packet_info));
+                    start_of_seq++;
+                }
+                else
+                    break;
+            }
+        }
+        // 2. pkt # in [rcvbase-N,rcvbase-1]
+        else if ((current_pkt - start_of_seq) >= -window_size
+            && (current_pkt - start_of_seq) < 0){
+            // send ACK
+            int crc_result = gen_crc16(response_packet.data, response_packet.data_size);
+            sendto(sockfd, &crc_result, sizeof(crc_result), 0, (struct sockaddr *)&receiver, length);
+        }
+
+
+        //printf("\nSeq Order: %d\n", response_packet.seq_no);
         //printf("CRC result: %x\n\n", crc_result);
         memset((char *) &response_packet.data, 0, sizeof(response_packet.data));
 
         if (response_packet.status == 1)
             break;
         i++;
-        if (i == 100)
-            i = 0;
     }
 
     close(sockfd);

@@ -11,7 +11,7 @@ struct packet_info
     int type;
     int seq_no;
     int max_no;
-
+    int crc_cksum;
     /* Status
      * 0: Middle of file
      * 1: Finished

@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
     int CW;
     
 
-    if (argc < 3) {
+    if (argc < 5) {
         error("ERROR, not enough arguments\n");
     }
 
@@ -95,6 +95,9 @@ int main(int argc, char *argv[])
     struct timeval start;
     gettimeofday(&start, NULL);
     double time_last = 0.0;
+    double pkt_loss_prob, pkt_corrupt_prob;
+    pkt_loss_prob = atof(argv[3]);
+    pkt_corrupt_prob = atof(argv[4]);
 
     while (1) {
 
@@ -154,6 +157,7 @@ int main(int argc, char *argv[])
                 // read packet from file
                 n2 = fread(response_packet.data, sizeof(char), data_MTU, file_stream);
                 response_packet.seq_no = current_pkt;
+                response_packet.max_no = no_of_pkt;
 
                 // check if last packet
                 if (response_packet.seq_no >= response_packet.max_no-1 
@@ -168,7 +172,8 @@ int main(int argc, char *argv[])
                 // set crc table
                 int crc_result = gen_crc16(response_packet.data, n2);
                 crc_table[current_pkt - start_of_seq] = crc_result;
-                printf("%x\n", crc_result);
+                response_packet.crc_cksum = crc_result;
+                printf("%x\t", crc_result);
                 // set time table
                 struct timeval end;
                 gettimeofday(&end, NULL);
@@ -222,11 +227,11 @@ int main(int argc, char *argv[])
             // otherwise, fetch the ack
             int received_crc;
             recvfrom(sockfd, &received_crc, sizeof(received_crc), 0, (struct sockaddr *) &receiver, &recv_len);
-            printf("%x\n", received_crc);/*
+            printf("%x\t%d\n", received_crc, current_pkt);
             for (i = start_of_seq; i<end_of_seq; i++){
                 printf("%d\t", time_table[i-start_of_seq]);
             }
-            printf("\n");*/
+            printf("\n");
             for (i = start_of_seq; i<end_of_seq; i++){
                 if (crc_table[i-start_of_seq] == received_crc)
                     time_table[i-start_of_seq] = -1;
