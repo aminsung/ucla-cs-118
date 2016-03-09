@@ -73,7 +73,8 @@ int main(int argc, char *argv[])
         error("ERROR, not enough arguments\n");
     }
 
-    sockfd = socket(AF_INET, SOCK_DGRAM, 0); // Create a socket fd
+    /* Setup UDP */
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0) error("ERROR Opening socket");
 
     length = sizeof(struct sockaddr_in);
@@ -89,6 +90,7 @@ int main(int argc, char *argv[])
     recv_len = sizeof(struct sockaddr_in);
     memset((char *) &request_packet, 0, sizeof(request_packet));
 
+    /* Setup for Selective Repeat and Packet Loss & Corruption */
     CW = atoi(argv[2]);
     int window_size = CW / data_MTU;
 
@@ -107,13 +109,14 @@ int main(int argc, char *argv[])
 
     while (1) {
 
+        /* Ready for requests from the client */
         n = recvfrom(sockfd, &request_packet, sizeof(request_packet), 0, (struct sockaddr *) &receiver, &recv_len);
         if (n < 0) error("ERROR recvfrom");
 
-        // Print request packet data
+        /* Print request packet data */
         print_pkt_info(request_packet);
 
-        // Find the absolute path to the requested file; path is stored in 'full_path'
+        /* Find absolute path to the requested file; path is stored in 'full_path' */
         FILE *file_stream;
         char *home = getenv("PWD");
         char *full_path = malloc(strlen(home) + strlen(request_packet.data) + 1);
@@ -124,10 +127,10 @@ int main(int argc, char *argv[])
         if ( (file_stream = fopen(full_path, "rb")) == NULL )
             perror("Cannot open file");
 
-        // Setup to send back a response packet
+        /* Setup to send back a response packet */
         memset((char *) &response_packet, 0, sizeof(response_packet));
 
-        // Determines how many packets we have to send, based on the length of the file that is requested
+        /* Determines how many packets we have to send based on the length of the requested file */
         int no_of_pkt = (fsize(file_stream) + (data_MTU-1)) / data_MTU;
         response_packet.max_no = no_of_pkt;
         response_packet.seq_no = 0;
@@ -138,49 +141,51 @@ int main(int argc, char *argv[])
             end_of_seq = no_of_pkt;
         else
             end_of_seq = window_size;
-        //printf("Total File Size: %d bytes\n\n", fsize(file_stream));
-        //printf("Total Packet No.: %d packets\n\n", no_of_pkt);
         struct packet_info *packet_window;
         packet_window = (struct packet_info *) malloc(window_size * sizeof(struct packet_info));
         int* crc_table = (int*) malloc(window_size*sizeof(int));
         int* time_table = (int*) malloc(window_size*sizeof(int));
         int i;
+
+        /* Iterating through the window
+         * -2 for not yet sent
+         *  -1 for already ACK'ed
+         *  o.w. for not yet ACK'ed
+         */
         for (i = 0; i<window_size; i++)
             time_table[i] = -2;
-        // -2 for not yet sent
-        // -1 for already ACK'ed
-        // o.w. for not yet ACK'ed.
 
-        // Create partitioned packets
+        /* Create partitioned packets */
         int index = 0;
         while(1){
-            // 1a) if next available seq # in window, send pkt
+            /* If next available seq # in window, send packet */
             if (time_table[current_pkt - start_of_seq] == -2){
 
-                // data packet
+                /* Packet type is DATA */
                 response_packet.type = 1;
 
-                // read packet from file
+                /* Read packet from file and store the # of bytes read */
                 n2 = fread(response_packet.data, sizeof(char), data_MTU, file_stream);
                 response_packet.seq_no = current_pkt;
                 response_packet.max_no = no_of_pkt;
 
-                // check if last packet
+                /* Check if this is the last packet among the paritioned packets */
                 if (response_packet.seq_no >= response_packet.max_no-1 
                 &&  start_of_seq == end_of_seq - 1)
                     response_packet.status = 1;
                 else
                     response_packet.status = 0;
 
-                // set response size
+                /* Set response packet size; especially necessary b/c of the last packet */
                 response_packet.data_size = n2;
 
-                // set crc table
+                /* Set CRC table */
                 int crc_result = gen_crc16(response_packet.data, n2);
                 crc_table[current_pkt - start_of_seq] = crc_result;
                 response_packet.crc_cksum = crc_result;
                 printf("%x\t", crc_result);
-                // set time table
+
+                /* Set time table */
                 struct timeval end;
                 gettimeofday(&end, NULL);
                 int time_diff = diff_ms(end, start);
