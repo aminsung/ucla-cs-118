@@ -191,7 +191,7 @@ int main(int argc, char *argv[])
                 int time_diff = diff_ms(end, start);
                 time_table[current_pkt - start_of_seq] = time_diff;
 
-                // save it
+                /* Save */
                 memcpy(&(packet_window[current_pkt - start_of_seq]), &response_packet, sizeof(struct packet_info));
 
                 if (pkt_loss_prob != 0.0)
