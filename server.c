@@ -206,14 +206,15 @@ int main(int argc, char *argv[])
                         response_packet.data[i] = 1+response_packet.data[i];
                 }
 
-                // send it
+                /* Send */
                 if (!(pkt_loss_prob != 0.0 && index % lost_count == 2))
                     sendto(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *)&receiver, recv_len);
                 
                 if (current_pkt < end_of_seq)
                     current_pkt++;
             }
-            // 2a) resend pkt n, restart timer
+
+            /* Rsend */
             index++;
             for (i = start_of_seq; i<end_of_seq; i++){
                 if (time_table[i-start_of_seq] >= 0){
@@ -231,7 +232,6 @@ int main(int argc, char *argv[])
 
             // 3a) ACK(n) in [sendbase,sendbase+N]: mark pkt n as received
 
-            // initialize variables
             fd_set inSet;
             struct timeval timeout;
             int received;
