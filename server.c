@@ -190,12 +190,12 @@ int main(int argc, char *argv[])
                 memcpy(&(packet_window[current_pkt - start_of_seq]), &response_packet, sizeof(struct packet_info));
 
                 if (pkt_loss_prob != 0.0)
-                    if (index % lost_count == 2){
+                    if (index % lost_count == 0){
                         memset(response_packet.data, '0', response_packet.data_size);
                     }
 
                 if (pkt_corrupt_prob != 0.0)
-                    if (index % corrupt_count == 3){
+                    if (index % corrupt_count == 1){
                     int i;
                     for (i = 0; i<response_packet.data_size; i++)
                         response_packet.data[i] = 1+response_packet.data[i];

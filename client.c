@@ -177,8 +177,8 @@ int main(int argc, char *argv[])
                 // you have to be right
                 if (buffer[0].seq_no == start_of_seq
                     && crc_ret == buffer[0].crc_cksum){
-                    printf("%d\t%x\t%d\n", buffer[0].seq_no, crc_ret, buffer[0].max_no);
-                    print_pkt_info(buffer[0]);
+                    //printf("%d\t%x\t%d\n", buffer[0].seq_no, crc_ret, buffer[0].max_no);
+                    //print_pkt_info(buffer[0]);
                     fwrite(buffer[0].data, sizeof(char), buffer[0].data_size, recv_file);
 
                     for (i = 0; i<window_size-1; i++){
