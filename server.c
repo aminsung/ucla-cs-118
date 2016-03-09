@@ -209,12 +209,12 @@ int main(int argc, char *argv[])
                 // send it
                 if (!(pkt_loss_prob != 0.0 && index % lost_count == 2))
                     sendto(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *)&receiver, recv_len);
-                index++;
+                
                 if (current_pkt < end_of_seq)
                     current_pkt++;
             }
             // 2a) resend pkt n, restart timer
-            
+            index++;
             for (i = start_of_seq; i<end_of_seq; i++){
                 if (time_table[i-start_of_seq] >= 0){
                     struct timeval end;
