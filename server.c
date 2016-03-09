@@ -98,6 +98,12 @@ int main(int argc, char *argv[])
     double pkt_loss_prob, pkt_corrupt_prob;
     pkt_loss_prob = atof(argv[3]);
     pkt_corrupt_prob = atof(argv[4]);
+    int lost_count;
+    if (pkt_loss_prob != 0.0)
+        lost_count = 1 / pkt_loss_prob;
+    int corrupt_count;
+    if (pkt_corrupt_prob != 0.0)
+        corrupt_count = 1 / pkt_corrupt_prob;
 
     while (1) {
 
@@ -132,7 +138,6 @@ int main(int argc, char *argv[])
             end_of_seq = no_of_pkt;
         else
             end_of_seq = window_size;
-
         //printf("Total File Size: %d bytes\n\n", fsize(file_stream));
         //printf("Total Packet No.: %d packets\n\n", no_of_pkt);
         struct packet_info *packet_window;
@@ -147,6 +152,7 @@ int main(int argc, char *argv[])
         // o.w. for not yet ACK'ed.
 
         // Create partitioned packets
+        int index = 0;
         while(1){
             // 1a) if next available seq # in window, send pkt
             if (time_table[current_pkt - start_of_seq] == -2){
@@ -173,7 +179,7 @@ int main(int argc, char *argv[])
                 int crc_result = gen_crc16(response_packet.data, n2);
                 crc_table[current_pkt - start_of_seq] = crc_result;
                 response_packet.crc_cksum = crc_result;
-                //printf("%x\t", crc_result);
+                printf("%x\t", crc_result);
                 // set time table
                 struct timeval end;
                 gettimeofday(&end, NULL);
@@ -183,8 +189,22 @@ int main(int argc, char *argv[])
                 // save it
                 memcpy(&(packet_window[current_pkt - start_of_seq]), &response_packet, sizeof(struct packet_info));
 
+                if (pkt_loss_prob != 0.0)
+                    if (index % lost_count == 2){
+                        memset(response_packet.data, '0', response_packet.data_size);
+                    }
+
+                if (pkt_corrupt_prob != 0.0)
+                    if (index % corrupt_count == 3){
+                    int i;
+                    for (i = 0; i<response_packet.data_size; i++)
+                        response_packet.data[i] = 1+response_packet.data[i];
+                }
+
                 // send it
-                sendto(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *)&receiver, recv_len);
+                if (!(pkt_loss_prob != 0.0 && index % lost_count == 2))
+                    sendto(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *)&receiver, recv_len);
+                index++;
                 if (current_pkt < end_of_seq)
                     current_pkt++;
             }
@@ -196,7 +216,7 @@ int main(int argc, char *argv[])
                     gettimeofday(&end, NULL);
                     int time_diff = diff_ms(end, start);
                     if (time_diff - time_table[i-start_of_seq] > WAIT){
-                        //printf("(%d)\n", time_diff - time_table[i-start_of_seq]);
+                        printf("(%d)\n", time_diff - time_table[i-start_of_seq]);
                         sendto(sockfd, &(packet_window[i - start_of_seq]), sizeof((packet_window[i - start_of_seq])), 0, (struct sockaddr *)&receiver, recv_len);
                         time_table[i-start_of_seq] = diff_ms(end, start);
                     }
@@ -227,11 +247,11 @@ int main(int argc, char *argv[])
             // otherwise, fetch the ack
             int received_crc;
             recvfrom(sockfd, &received_crc, sizeof(received_crc), 0, (struct sockaddr *) &receiver, &recv_len);
-            /*printf("%x\t%d\n", received_crc, current_pkt);
+            printf("%x\t%d\n", received_crc, current_pkt);
             for (i = start_of_seq; i<end_of_seq; i++){
                 printf("%d\t", time_table[i-start_of_seq]);
             }
-            printf("\n");*/
+            printf("\n");
             for (i = start_of_seq; i<end_of_seq; i++){
                 if (crc_table[i-start_of_seq] == received_crc)
                     time_table[i-start_of_seq] = -1;
