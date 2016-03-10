@@ -33,8 +33,9 @@ void print_pkt_info(struct packet_info packet)
     printf("\n");
 };
 
-double random_threshold()
+double random_threshold(int t)
 {
     // Random threshold to see if the loss/corruption stays below this!
+    srand(t);
     return ((double) rand() / (double) RAND_MAX);
 };

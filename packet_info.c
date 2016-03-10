@@ -36,13 +36,8 @@ void print_pkt_info(struct packet_info packet)
     printf("Resp.  Stat:\t\t%d\t(0: Packets being transmitted. 1: Last packet)\n", packet.status);
     printf("H e a l t h:\t\t%d\t(0: Good. 1: Packet Loss. 2: Packet Corrupt)\n", packet.health);
     printf("Sequence No:\t\t%d\n", packet.seq_no);
+    printf("Sequence Max:\t\t%d\n", packet.max_no);
     printf("Data   Time:\t\t%f\n", packet.time);
-    printf("CRC  CHKSUM:\t\t%d\n", packet.crc_cksum);
+    printf("CRC  CHKSUM:\t\t%x\n", packet.crc_cksum);
     printf("\n");
-};
-
-double random_threshold()
-{
-    // Random threshold to see if the loss/corruption stays below this!
-    return ((double) rand() / (double) RAND_MAX);
 };

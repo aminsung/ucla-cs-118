@@ -13,6 +13,14 @@
 #define CRC16 0x8005
 #define WAIT 300               // wait time in ms
 
+double random_threshold(int t)
+{
+    // Random threshold to see if the loss/corruption stays below this!
+    srand(t);
+    return ((double) rand() / (double) RAND_MAX);
+};
+
+
 int diff_ms(struct timeval t1, struct timeval t2)
 {
     return (((t1.tv_sec - t2.tv_sec) * 1000000) + (t1.tv_usec - t2.tv_usec))/1000;
@@ -193,16 +201,17 @@ int main(int argc, char *argv[])
 
                 /* Save */
                 memcpy(&(packet_window[current_pkt - start_of_seq]), &response_packet, sizeof(struct packet_info));
-
+                double random = random_threshold(time_diff); 
                 if (pkt_loss_prob != 0.0)
-                    if (pkt_loss_prob > random_threshold()){
+                    if (pkt_loss_prob > random){
                     //if (index % lost_count == 0){
                         memset(response_packet.data, '0', response_packet.data_size);
                         response_packet.health = 1;
                     }
 
                 if (pkt_corrupt_prob != 0.0)
-                    if (pkt_corrupt_prob > random_threshold()){
+                    if (pkt_corrupt_prob < random
+                        && random < (pkt_corrupt_prob+pkt_loss_prob)){
                     // if (index % corrupt_count == 1){
                     int i;
                     for (i = 0; i<response_packet.data_size; i++)
@@ -211,7 +220,6 @@ int main(int argc, char *argv[])
                         response_packet.health = 2;
                     }
                 }
-
                 /* Send */
                 if (!(pkt_loss_prob != 0.0 && index % lost_count == 2))
                     sendto(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *)&receiver, recv_len);
@@ -233,6 +241,9 @@ int main(int argc, char *argv[])
                     if (time_diff - time_table[i-start_of_seq] > WAIT){
                         // printf("(%d)\n", time_diff - time_table[i-start_of_seq]);
                         response_packet.type = 3;
+                        if ((packet_window[i - start_of_seq]).seq_no
+                            == (packet_window[i - start_of_seq]).max_no)
+                            (packet_window[i - start_of_seq]).status = 1;
                         sendto(sockfd, &(packet_window[i - start_of_seq]), sizeof((packet_window[i - start_of_seq])), 0, (struct sockaddr *)&receiver, recv_len);
                         time_table[i-start_of_seq] = diff_ms(end, start);
                     }

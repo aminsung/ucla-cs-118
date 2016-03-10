@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/time.h>
 #include <time.h>
 #include "packet_info.c"
 
@@ -15,6 +16,19 @@ double P_c = 0.0;
 double P_l = 0.0;
 
 #define CRC16 0x8005
+
+int diff_ms(struct timeval t1, struct timeval t2)
+{
+    return (((t1.tv_sec - t2.tv_sec) * 1000000) + (t1.tv_usec - t2.tv_usec))/1000;
+}
+
+
+double random_threshold(int t)
+{
+    // Random threshold to see if the loss/corruption stays below this!
+    srand(t);
+    return ((double) rand() / (double) RAND_MAX);
+};
 
 uint16_t gen_crc16(const uint8_t *data, uint16_t size)
 {
@@ -62,6 +76,8 @@ int main(int argc, char *argv[])
     if (argc != 6) error("ERROR Missing parameters.\n\rFormat: <sender_hostname> <sender_portnumber> <filename> <packet_loss_value> <packet_corrupt_value>");
     */
 
+    struct timeval start;
+    gettimeofday(&start, NULL);
     int sockfd, n, seq_no;
     unsigned int length;
     struct sockaddr_in sender, receiver; // sender: server | receiver: client
@@ -141,6 +157,10 @@ int main(int argc, char *argv[])
     {
         recvfrom(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *) &receiver, &length);
         
+        struct timeval end;
+        gettimeofday(&end, NULL);
+        int time_diff = diff_ms(end, start);
+        double random = random_threshold(time_diff); 
         /* Get the max # of sequence */
         if (end_of_seq > response_packet.max_no)
             end_of_seq = response_packet.max_no;
@@ -149,14 +169,15 @@ int main(int argc, char *argv[])
 
         /* Loss and Corruption */
         if (pkt_loss_prob != 0.0)
-            if (pkt_loss_prob > random_threshold()){
+            if (pkt_loss_prob > random){
             // if (i % lost_count == 0){
                 memset(response_packet.data, '0', response_packet.data_size);
                 response_packet.health = 1;
             }
 
         if (pkt_corrupt_prob != 0.0)
-            if (pkt_corrupt_prob > random_threshold()){
+            if (pkt_corrupt_prob < random
+                && random < (pkt_corrupt_prob+pkt_loss_prob)){
             // if (i % corrupt_count == 1){
             int i;
             for (i = 0; i<response_packet.data_size; i++)
