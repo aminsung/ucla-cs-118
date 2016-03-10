@@ -119,11 +119,11 @@ int main(int argc, char *argv[])
     if (n < 0) error("ERROR Sendto");
     print_pkt_info(request_packet);
 
-    // This is the requested file that is transferred over
+    /* This is the requested file that is transferred over */
     FILE *recv_file;
-    recv_file = fopen(strcat(filename, " (2)"), "wb");
+    recv_file = fopen(strcat(filename, "_(2)"), "wb");
 
-    // Prep for the respones packet
+    /* Prep for the response packets */
     struct packet_info response_packet;
     memset((char *) &response_packet, 0, sizeof(response_packet));
 
@@ -141,23 +141,30 @@ int main(int argc, char *argv[])
     {
         recvfrom(sockfd, &response_packet, sizeof(response_packet), 0, (struct sockaddr *) &receiver, &length);
         
-        // get the max # of sequence
+        /* Get the max # of sequence */
         if (end_of_seq > response_packet.max_no)
             end_of_seq = response_packet.max_no;
         else
             end_of_seq = window_size;
 
-        // deal with loss/corruption
+        /* Loss and Corruption */
         if (pkt_loss_prob != 0.0)
-            if (i % lost_count == 0){
+            if (pkt_loss_prob > random_threshold()){
+            // if (i % lost_count == 0){
                 memset(response_packet.data, '0', response_packet.data_size);
+                response_packet.health = 1;
             }
 
         if (pkt_corrupt_prob != 0.0)
-            if (i % corrupt_count == 1){
+            if (pkt_corrupt_prob > random_threshold()){
+            // if (i % corrupt_count == 1){
             int i;
             for (i = 0; i<response_packet.data_size; i++)
+            {
                 response_packet.data[i] = 1+response_packet.data[i];
+                response_packet.health = 2;
+            }
+            
         }
 
         int current_pkt = response_packet.seq_no;
@@ -165,6 +172,7 @@ int main(int argc, char *argv[])
         if ((current_pkt - start_of_seq) >= 0
             && (current_pkt - start_of_seq) < window_size){
             // send ACK
+            response_packet.type = 2;
             int crc_result = gen_crc16(response_packet.data, response_packet.data_size);
             sendto(sockfd, &crc_result, sizeof(crc_result), 0, (struct sockaddr *)&receiver, length);
             // buffer first
@@ -195,9 +203,12 @@ int main(int argc, char *argv[])
         else if ((current_pkt - start_of_seq) >= -window_size
             && (current_pkt - start_of_seq) < 0){
             // send ACK
+            response_packet.type = 2;
             int crc_result = gen_crc16(response_packet.data, response_packet.data_size);
             sendto(sockfd, &crc_result, sizeof(crc_result), 0, (struct sockaddr *)&receiver, length);
         }
+
+        print_pkt_info(response_packet);
 
 
         //printf("\nSeq Order: %d\n", response_packet.seq_no);

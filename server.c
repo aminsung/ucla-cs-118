@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
         if (n < 0) error("ERROR recvfrom");
 
         /* Print request packet data */
-        print_pkt_info(request_packet);
+        // print_pkt_info(request_packet);
 
         /* Find absolute path to the requested file; path is stored in 'full_path' */
         FILE *file_stream;
@@ -183,7 +183,7 @@ int main(int argc, char *argv[])
                 int crc_result = gen_crc16(response_packet.data, n2);
                 crc_table[current_pkt - start_of_seq] = crc_result;
                 response_packet.crc_cksum = crc_result;
-                printf("%x\t", crc_result);
+                // printf("%x\t", crc_result);
 
                 /* Set time table */
                 struct timeval end;
@@ -195,15 +195,21 @@ int main(int argc, char *argv[])
                 memcpy(&(packet_window[current_pkt - start_of_seq]), &response_packet, sizeof(struct packet_info));
 
                 if (pkt_loss_prob != 0.0)
-                    if (index % lost_count == 0){
+                    if (pkt_loss_prob > random_threshold()){
+                    //if (index % lost_count == 0){
                         memset(response_packet.data, '0', response_packet.data_size);
+                        response_packet.health = 1;
                     }
 
                 if (pkt_corrupt_prob != 0.0)
-                    if (index % corrupt_count == 1){
+                    if (pkt_corrupt_prob > random_threshold()){
+                    // if (index % corrupt_count == 1){
                     int i;
                     for (i = 0; i<response_packet.data_size; i++)
+                    {
                         response_packet.data[i] = 1+response_packet.data[i];
+                        response_packet.health = 2;
+                    }
                 }
 
                 /* Send */
@@ -212,21 +218,26 @@ int main(int argc, char *argv[])
                 
                 if (current_pkt < end_of_seq)
                     current_pkt++;
+
+            print_pkt_info(response_packet);
             }
 
-            /* Rsend */
+            /* Resend */
             index++;
             for (i = start_of_seq; i<end_of_seq; i++){
                 if (time_table[i-start_of_seq] >= 0){
                     struct timeval end;
                     gettimeofday(&end, NULL);
                     int time_diff = diff_ms(end, start);
+                    response_packet.time = time_diff - time_table[i-start_of_seq];
                     if (time_diff - time_table[i-start_of_seq] > WAIT){
-                        printf("(%d)\n", time_diff - time_table[i-start_of_seq]);
+                        // printf("(%d)\n", time_diff - time_table[i-start_of_seq]);
+                        response_packet.type = 3;
                         sendto(sockfd, &(packet_window[i - start_of_seq]), sizeof((packet_window[i - start_of_seq])), 0, (struct sockaddr *)&receiver, recv_len);
                         time_table[i-start_of_seq] = diff_ms(end, start);
                     }
                 }
+            print_pkt_info(response_packet);
             }
             
 
@@ -252,11 +263,11 @@ int main(int argc, char *argv[])
             // otherwise, fetch the ack
             int received_crc;
             recvfrom(sockfd, &received_crc, sizeof(received_crc), 0, (struct sockaddr *) &receiver, &recv_len);
-            printf("%x\t%d\n", received_crc, current_pkt);
+            // printf("%x\t%d\n", received_crc, current_pkt);
             for (i = start_of_seq; i<end_of_seq; i++){
-                printf("%d\t", time_table[i-start_of_seq]);
+                // printf("%d\t", time_table[i-start_of_seq]);
             }
-            printf("\n");
+            // printf("\n");
             for (i = start_of_seq; i<end_of_seq; i++){
                 if (crc_table[i-start_of_seq] == received_crc)
                     time_table[i-start_of_seq] = -1;
